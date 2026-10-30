@@ -1,0 +1,22 @@
+# 第三方 OCCT 预编译 SDK（按 tools/README.md 安装）
+occt/
+
+# 构建产物
+build/
+.pixi/
+
+# Python
+*.pyc
+__pycache__/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# 编译数据库
+compile_commands.json
+
+# 操作系统
+.DS_Store
+Thumbs.db

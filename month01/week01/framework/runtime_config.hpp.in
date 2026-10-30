@@ -1,0 +1,2 @@
+#pragma once
+#define GEOMETRY_OCCT_RESOURCES "@OpenCASCADE_RESOURCE_DIR@"

@@ -1,0 +1,8 @@
+{
+  "version": "0.2.0",
+  "configurations": [{
+    "name": "本周几何实验 (CodeLLDB)", "type": "lldb", "request": "launch",
+    "program": "${workspaceFolder}/build/demo", "cwd": "${workspaceFolder}",
+    "args": [], "env": {"QT_QPA_PLATFORM": "xcb"}
+  }]
+}

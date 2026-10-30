@@ -1,0 +1,18 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {"major": 4, "minor": 3, "patch": 0},
+  "configurePresets": [
+    {"name": "default", "generator": "Ninja", "binaryDir": "${sourceDir}/build",
+     "cacheVariables": {"CMAKE_CXX_COMPILER": "clang++", "CMAKE_BUILD_TYPE": "Debug", "CMAKE_EXPORT_COMPILE_COMMANDS": true}},
+    {"name": "headless", "inherits": "default", "binaryDir": "${sourceDir}/build/headless",
+     "cacheVariables": {"GEOMETRY_BUILD_GUI": false}}
+  ],
+  "buildPresets": [
+    {"name": "default", "configurePreset": "default"},
+    {"name": "headless", "configurePreset": "headless"}
+  ],
+  "testPresets": [
+    {"name": "default", "configurePreset": "default", "output": {"outputOnFailure": true}},
+    {"name": "headless", "configurePreset": "headless", "output": {"outputOnFailure": true}}
+  ]
+}
