@@ -3,6 +3,12 @@
 以 OCCT 学习几何表示、建模运算、拓扑关系、容差与模型修复。规划 6 个月、24 周；  
 第一月四周的独立讲义、实验代码与验收已实现，其余月份按规划推进。
 
+## 开发环境
+
+- **Linux 平台**：Fedora 44（内核 `7.2.11-200.fc44.x86_64`，x86_64）。
+- **OCCT 版本**：8.1.0。
+- **OCCT 库目录**：仓库根下的 [`occt/`](occt/)，含 `include/`、`lib/`、`bin/`、`share/`，各周共用；该目录已被 `.gitignore` 排除，不随仓库分发，按各周 tools 文档安装。
+
 ## 学习与框架入口
 
 - [六个月学习计划](plan/CAD几何建模引擎.md)：逐周概念、实验和月末验收。
@@ -251,9 +257,7 @@
 
 ## 独立构建与运行
 
-工具链为 **Clang + CMake + Ninja + clangd**。模板采用 C++23、`import std;`、Qt Widgets 与 OCCT；每个 week 复制一份完整框架源码，各自构建，不引用其他周代码或产物。
-
-开发与验证环境：Linux Fedora 44（内核 `7.2.11-200.fc44.x86_64`，x86_64）。OCCT 版本 **8.1.0**，预编译安装位于本仓库根下的 [`occt/`](occt/) 目录（含 `include/`、`lib/`、`bin/`、`share/`，各周共用）；该目录已被 `.gitignore` 排除，不随仓库分发，按各周 tools 文档安装。
+工具链为 **Clang + CMake + Ninja + clangd**。模板采用 C++23、`import std;`、Qt Widgets 与 OCCT；每个 week 复制一份完整框架源码，各自构建，不引用其他周代码或产物。平台、OCCT 版本与库目录见开头[开发环境](#开发环境)。
 
 在任意 `month01/weekYY/` 目录执行 `./run.sh`，或 `./run.sh --headless`；程序默认运行本周实验。每周自带 tools 文档、CMake/IDE 配置和本地 build。新课程的复制入口仍为 `template/week-template/`。
 
