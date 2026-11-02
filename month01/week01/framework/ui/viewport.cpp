@@ -10,6 +10,7 @@ import std;
 #include <TopoDS_Vertex.hxx>
 #include <Prs3d_Drawer.hxx>
 #include <Prs3d_PointAspect.hxx>
+#include <Prs3d_LineAspect.hxx>
 #include <Image_PixMap.hxx>
 #include <Quantity_Color.hxx>
 #include <Standard_Failure.hxx>
@@ -48,6 +49,9 @@ Viewport::Viewport(QWidget *parent) : QWidget(parent) {
     setMouseTracking(true);
     setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(320, 240);
+    // The controller also has a secondary left-button drag map. Disable it:
+    // left is selection only; an unhandled object drag can rotate the camera.
+    SetAllowDragging(false);
     auto &gestures = ChangeMouseGestureMap();
     gestures.Clear();
     gestures.Bind(Aspect_VKeyMouse_RightButton, AIS_MouseGesture_RotateOrbit);
@@ -79,6 +83,21 @@ void Viewport::initialize() {
         viewer_->SetLightOn();
         context_ = new AIS_InteractiveContext(viewer_);
         context_->SetDisplayMode(AIS_Shaded, false);
+        // OCCT's default selection is a thin gray wireframe, easily confused
+        // with the model boundaries. Keep hover cyan and selection yellow.
+        for (auto type : {Prs3d_TypeOfHighlight_Selected, Prs3d_TypeOfHighlight_LocalSelected}) {
+            const auto &style = context_->HighlightStyle(type);
+            style->SetColor(Quantity_NOC_YELLOW);
+            style->SetDisplayMode(AIS_Shaded);
+            style->SetZLayer(Graphic3d_ZLayerId_Topmost);
+            style->SetPointAspect(
+                new Prs3d_PointAspect(Aspect_TOM_O_POINT, Quantity_NOC_YELLOW, 7.0));
+            for (const auto &line : {style->LineAspect(), style->WireAspect(),
+                                     style->FreeBoundaryAspect(), style->UnFreeBoundaryAspect()}) {
+                line->SetColor(Quantity_NOC_YELLOW);
+                line->SetWidth(3.0);
+            }
+        }
         view_ = viewer_->CreateView();
         view_->SetWindow(new Xw_Window(display_, static_cast<Aspect_Drawable>(winId())));
         view_->SetBackgroundColor(Quantity_Color(0.08, 0.11, 0.16, Quantity_TOC_RGB));

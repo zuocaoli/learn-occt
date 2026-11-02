@@ -28,6 +28,67 @@ ninja --version
 pkg-config --modversion Qt6Widgets Qt6Test x11 gl
 ```
 
+## 安装 OCCT SDK
+
+课程使用上游 [Open-Cascade-SAS/OCCT](https://github.com/Open-Cascade-SAS/OCCT) 的提交
+`3d097a0328e71b826377d4814ab05ec3c3d23871`（8.1.0 dev1-3d097a03）。
+`几何引擎/occt/` 是本机安装目录，已被 Git 忽略，首次检出需要自行安装。
+课程调用此提交的 API；系统 OCCT 7.9.3 无法编译本课程。
+
+先准备上表工具链以及 FreeType、X11、OpenGL/GLX 开发文件。以下为发行版依赖命令，编译器等工具仍需满足上表版本：
+
+```bash
+# Fedora
+sudo dnf install git freetype-devel libX11-devel libXext-devel libXmu-devel libXi-devel mesa-libGL-devel mesa-libGLU-devel
+# Debian / Ubuntu 使用这一条替代 Fedora 命令
+sudo apt install git libfreetype-dev libx11-dev libxext-dev libxmu-dev libxi-dev libgl-dev libglu1-mesa-dev
+```
+
+下面从**本周目录**执行；`../..` 对模板和各月课程均为 `几何引擎/`。
+获取源码需要联网。克隆步骤适用于尚无 `occt-src/` 的首次安装；已有源码时核对远程来源和工作区，再切换到指定提交。
+
+```bash
+cd ../..
+geometry_dir="$PWD"
+git clone --filter=blob:none --no-checkout https://github.com/Open-Cascade-SAS/OCCT.git occt-src
+git -C occt-src checkout --detach 3d097a0328e71b826377d4814ab05ec3c3d23871
+git -C occt-src rev-parse HEAD
+
+cmake -S occt-src -B occt-src/build-course -G Ninja \
+  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_LIBRARY_TYPE=Shared \
+  -DINSTALL_DIR="$geometry_dir/occt" -DINSTALL_DIR_LAYOUT=Unix \
+  -DINSTALL_DIR_LIB=lib -DINSTALL_DIR_CMAKE=lib/cmake/opencascade \
+  -DBUILD_USE_VCPKG=OFF -DUSE_GIT_HASH=ON \
+  -DBUILD_MODULE_FoundationClasses=ON -DBUILD_MODULE_ModelingData=ON \
+  -DBUILD_MODULE_ModelingAlgorithms=ON -DBUILD_MODULE_Visualization=ON \
+  -DBUILD_MODULE_ApplicationFramework=OFF -DBUILD_MODULE_DataExchange=OFF \
+  -DBUILD_MODULE_Draw=OFF -DUSE_TK=OFF \
+  -DUSE_FREETYPE=ON -DUSE_XLIB=ON -DUSE_OPENGL=ON \
+  -DUSE_TBB=OFF -DUSE_FREEIMAGE=OFF -DUSE_FFMPEG=OFF \
+  -DUSE_VTK=OFF -DUSE_OPENVR=OFF -DUSE_RAPIDJSON=OFF -DUSE_DRACO=OFF
+cmake --build occt-src/build-course --parallel 4
+cmake --install occt-src/build-course
+test -f occt/lib/cmake/opencascade/OpenCASCADEConfig.cmake
+rg 'OCC_VERSION_(COMPLETE|DEVELOPMENT)' occt/include/opencascade/Standard_Version.hxx
+```
+
+预期头文件输出 `8.1.0` 和 `dev1-3d097a03`。安装生成 `include/opencascade/`、
+`lib/`、`bin/` 和 `share/opencascade/resources/`；课程只需上述四个 OCCT 模块，无需 Tcl/Tk、Draw、OCAF 或交换格式组件。并行度可按内存调整，安装到仓库内不需要 sudo。
+
+回到**原本的周目录**后，显式指定 SDK 并检查其存在，避免缺失时 CMake 改用系统安装：
+
+```bash
+occt_package_dir="$PWD/../../occt/lib/cmake/opencascade"
+test -f "$occt_package_dir/OpenCASCADEConfig.cmake" &&
+  cmake --fresh --preset default -DOpenCASCADE_DIR="$occt_package_dir"
+cmake --build --preset default
+ctest --preset default --no-tests=error
+```
+
+配置输出应包含 `OCCT: 8.1.0 dev1-3d097a03`。核心配置改用 `--preset headless`，
+同样传入 `-DOpenCASCADE_DIR="$occt_package_dir"`，后续构建和测试也选 `headless`。
+
 ## 配置、构建、测试
 
 ```bash
@@ -72,6 +133,18 @@ QT_SCALE_FACTOR=2 xvfb-run -a -s '-screen 0 1600x1100x24' ./viewer-tests
 预期输出 `Real viewer checks passed`，当前目录生成 `viewer.png` 和 `workbench.png`。测试验证基础示例的非空模型渲染、鼠标选面与树联动、坐标换算及旋转、平移、缩放、线框和显隐；随后切换到本周实际实验，逐阶段检查非空图像，生成 `course-stage-N.png` 和 `course-workbench.png`。两次截图会覆盖，可在再次执行前另存需要的图像。
 
 手工补充检查：展开面和边、选择相邻面共享的边、切换阶段、修改尺寸重跑、保存后读取、关闭窗口。默认平台选择 `xcb`；纯 Wayland 原生视窗尚未实现。
+
+## 左键拖动退出的排查记录
+
+左键仅单击选择，按住拖动不改变选择、模型或相机；右键旋转，中键平移，滚轮缩放。真实视窗测试在首次右键旋转前比较左键拖动前后的图像和选择事件，并验证拖动后单击仍能选面。
+
+`AIS_ViewController` 除主手势映射外，还有默认的左键物体拖拽映射。只清空 `ChangeMouseGestureMap()` 不会关闭该路径；未处理的物体拖动仍可进入相机旋转，引发异常相机参数和 `ZFar should be greater than ZNear` 断言。视窗通过 OCCT 提供的 `SetAllowDragging(false)` 明确关闭物体拖拽，保留单击选择和已有相机手势。
+
+## 选中但看不到高亮
+
+OCCT 默认选中样式为细灰色线框，容易与模型边界混淆。视窗同时设置整体和局部选中样式：黄色、着色显示、独立深度层，并放大点和加粗边；青色继续用于悬停预选。单击后将鼠标移到空白处，黄色仍应保留；单击空白处应清除。
+
+真实视窗测试对整体、面、边、顶点分别点击并核对回传拓扑类型，再检查鼠标移开后的黄色像素与取消选择后的清除结果。生成 `selection-object.png`、`selection-face.png`、`selection-edge.png`、`selection-vertex.png` 和 `selection-cleared.png`，用于人工核对。
 
 ## clangd 与调试
 
